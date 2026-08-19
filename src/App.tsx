@@ -477,7 +477,7 @@ function App() {
                     GitHub <ArrowIcon />
                   </ExternalLink>
                   <ExternalLink
-                    href="https://developer.nuka.works/team/powerm1nt"
+                    href="https://blog.nuka.works/blog"
                     label="More about Emi"
                   >
                     More about Emi <ArrowIcon />
