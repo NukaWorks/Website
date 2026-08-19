@@ -37,12 +37,6 @@ variable "shared_assets_prefix" {
   default     = "shared_assets"
 }
 
-variable "web_bucket_name" {
-  description = "Globally-unique bucket serving the built React frontend."
-  type        = string
-  default     = "nwrks-web-prod"
-}
-
 variable "cdn_custom_domain_host" {
   description = "Custom domain that serves static assets through the CDN."
   type        = string
@@ -50,7 +44,7 @@ variable "cdn_custom_domain_host" {
 }
 
 variable "site_custom_domain_host" {
-  description = "Custom domain that serves the React frontend."
+  description = "Custom domain that serves the combined blog frontend and /api through Cloud CDN."
   type        = string
   default     = "blog.nuka.works"
 }
@@ -62,7 +56,7 @@ variable "company_site_custom_domain_host" {
 }
 
 variable "api_service_name" {
-  description = "Cloud Run service name for the Server API."
+  description = "Cloud Run service name for the combined blog frontend and API."
   type        = string
   default     = "blog-api"
 }
@@ -81,7 +75,7 @@ variable "iap_access_members" {
 
 variable "api_image" {
   description = <<-EOT
-    Container image for the API. Terraform only sets the initial value: deploy-server.yml pushes a
+    Container image for the blog. Terraform only sets the initial value: deploy-web.yml pushes a
     new digest on every release and Cloud Run's own revision history owns it from then on, which is
     why the image field is ignored below.
   EOT

@@ -14,7 +14,7 @@ output "company_cdn_asset_base_url" {
 }
 
 output "site_url" {
-  description = "Public URL of the React frontend."
+  description = "Public URL of the blog frontend."
   value       = "https://${var.site_custom_domain_host}"
 }
 
@@ -24,7 +24,12 @@ output "company_site_url" {
 }
 
 output "api_url" {
-  description = "Cloud Run URL of the Server API — this is VITE_API_BASE_URL for the frontend build."
+  description = "Public same-origin base URL of the blog API, served through Cloud CDN."
+  value       = "https://${var.site_custom_domain_host}/api"
+}
+
+output "blog_service_url" {
+  description = "Direct Cloud Run URL for diagnostics; browsers use site_url and /api."
   value       = google_cloud_run_v2_service.api.uri
 }
 
@@ -38,11 +43,6 @@ output "assets_bucket" {
   value       = google_storage_bucket.assets.name
 }
 
-output "web_bucket" {
-  description = "Bucket serving the built frontend."
-  value       = google_storage_bucket.web.name
-}
-
 output "workload_identity_provider" {
   description = "Set as the GCP_WORKLOAD_IDENTITY_PROVIDER repository secret for the deploy workflows."
   value       = google_iam_workload_identity_pool_provider.github.name
@@ -54,6 +54,6 @@ output "deployer_service_account" {
 }
 
 output "artifact_registry_repository" {
-  description = "Docker repository the API image is pushed to."
+  description = "Docker repository the combined application images are pushed to."
   value       = "${google_artifact_registry_repository.containers.location}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.containers.repository_id}"
 }

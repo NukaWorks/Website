@@ -145,11 +145,13 @@ applied to bucket objects: never execute patch content, and note that proposal P
   `terraform -chdir=terraform apply -var project_id=<project>`.
 - Do not change `assets_prefix`. Objects sit under `static/` so that published markdown keeps the
   exact public paths it had before the Azure migration. Changing it breaks every existing link.
+- `blog.nuka.works` and `/api` share the public blog Cloud Run backend. Cloud CDN uses origin cache
+  headers there, so API routes must stay private/no-store unless a response is intentionally public.
 - The old Azure stack was decommissioned in August 2026. `scripts/migrate-azure-to-gcp.sh` is kept
   for its historical record of the migration; it no longer has live resources to act on.
 - The company site shares `nwrks-assets-prod` with the blog but owns only the `shared_assets/`
-  prefix. Its frontend is served from Cloud Run—not the blog web bucket—so Google IAP can require
-  `nuka.works` Workspace SSO before returning the site.
+  prefix. Its Cloud Run backend remains separate from the public blog backend so Google IAP can
+  require `nuka.works` Workspace SSO before returning the company site.
 
 ## House rules
 
