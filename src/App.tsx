@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import AppModal from "./Common/Components/AppModal/AppModal";
+import ExternalLink from "./Common/Components/ExternalLink/ExternalLink";
 import Wallpaper from "./Common/Components/Wallpaper/Wallpaper";
 import { injectAssetCssVariables } from "./Services/wallpaper";
 
@@ -30,6 +32,12 @@ const PROJECT_COPY: Record<string, ProjectCopy> = {
 
 const NUKAWORKS_LOGO_URL =
   "https://nwrks-cdn.public.prod.nuka.works/static/logo_nwrks.png";
+
+const COMPANY_SECTION_IDS = ["top", "work", "vision", "studio"] as const;
+type CompanySectionId = (typeof COMPANY_SECTION_IDS)[number];
+type HeaderItemId = CompanySectionId | "github";
+
+const HEADER_CLICK_LOCK_MS = 1100;
 
 const FALLBACK_REPOS: GitHubRepo[] = Object.keys(PROJECT_COPY).map((name) => ({
   name,
@@ -82,7 +90,10 @@ function formatActivity(date: string): string {
 
 function App() {
   const [repos, setRepos] = useState<GitHubRepo[]>(FALLBACK_REPOS);
-  const [githubState, setGithubState] = useState<"loading" | "live" | "fallback">("loading");
+  const [activeHeaderItem, setActiveHeaderItem] = useState<HeaderItemId>("top");
+  const [isHeaderVisible, setIsHeaderVisible] = useState(true);
+  const keepHeaderVisibleUntil = useRef(0);
+  const pivot = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     document.title = "NukaWorks — Software for human connection";
@@ -105,18 +116,98 @@ function App() {
 
         if (featured.length > 0) {
           setRepos(featured);
-          setGithubState("live");
-        } else {
-          setGithubState("fallback");
         }
       })
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return;
-        setGithubState("fallback");
+        // Keep the curated fallback project data when GitHub is unavailable.
       });
 
     return () => controller.abort();
   }, []);
+
+  useEffect(() => {
+    let previousScrollY = Math.max(window.scrollY, 0);
+    let animationFrame = 0;
+
+    const updateActiveSection = (scrollY: number) => {
+      if (performance.now() < keepHeaderVisibleUntil.current) return;
+
+      const viewportMarker = scrollY + window.innerHeight * 0.32;
+      let nextSection: CompanySectionId = "top";
+
+      COMPANY_SECTION_IDS.forEach((sectionId) => {
+        const section = document.getElementById(sectionId);
+        if (section && section.offsetTop <= viewportMarker) nextSection = sectionId;
+      });
+
+      setActiveHeaderItem((current) => (current === nextSection ? current : nextSection));
+    };
+
+    const updateHeader = () => {
+      const scrollY = Math.max(window.scrollY, 0);
+      const delta = scrollY - previousScrollY;
+      const navigationIsInProgress = performance.now() < keepHeaderVisibleUntil.current;
+
+      if (scrollY <= 24 || navigationIsInProgress) {
+        setIsHeaderVisible(true);
+      } else if (delta > 3 && scrollY > 120) {
+        setIsHeaderVisible(false);
+      } else if (delta < -3) {
+        setIsHeaderVisible(true);
+      }
+
+      updateActiveSection(scrollY);
+      previousScrollY = scrollY;
+      animationFrame = 0;
+    };
+
+    const handleScroll = () => {
+      if (!animationFrame) animationFrame = window.requestAnimationFrame(updateHeader);
+    };
+
+    updateActiveSection(previousScrollY);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      if (animationFrame) window.cancelAnimationFrame(animationFrame);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isHeaderVisible || !pivot.current) return;
+
+    const activeItem = pivot.current.querySelector<HTMLElement>(
+      `[data-header-item="${activeHeaderItem}"]`
+    );
+    if (!activeItem) return;
+
+    const centeredPosition =
+      activeItem.offsetLeft - (pivot.current.clientWidth - activeItem.offsetWidth) / 2;
+    const maximumPosition = pivot.current.scrollWidth - pivot.current.clientWidth;
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    pivot.current.scrollTo({
+      left: Math.max(0, Math.min(centeredPosition, maximumPosition)),
+      behavior: prefersReducedMotion ? "auto" : "smooth",
+    });
+  }, [activeHeaderItem, isHeaderVisible]);
+
+  const selectHeaderItem = (item: HeaderItemId) => {
+    keepHeaderVisibleUntil.current = performance.now() + HEADER_CLICK_LOCK_MS;
+    setActiveHeaderItem(item);
+    setIsHeaderVisible(true);
+  };
+
+  const headerItemClass = (item: HeaderItemId, external = false) =>
+    [
+      "pivot-item",
+      external ? "pivot-item-external" : "",
+      activeHeaderItem === item ? "is-active" : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
 
   const featuredRepos = useMemo(
     () =>
@@ -134,35 +225,64 @@ function App() {
       <Wallpaper />
 
       <div className="company-site">
-        <header className="metro-header">
+        <header
+          className={`metro-header company-smart-header ${isHeaderVisible ? "is-visible" : "is-hidden"}`}
+          onFocusCapture={() => setIsHeaderVisible(true)}
+        >
           <div className="metro-header-row">
-            <nav className="metro-pivot" aria-label="Primary navigation">
-              <a className="pivot-item is-active" href="#top" aria-current="page">
+            <nav ref={pivot} className="metro-pivot" aria-label="Primary navigation">
+              <a
+                className={headerItemClass("top")}
+                data-header-item="top"
+                href="#top"
+                aria-current={activeHeaderItem === "top" ? "location" : undefined}
+                onClick={() => selectHeaderItem("top")}
+              >
                 home
               </a>
-              <a className="pivot-item" href="#work">
+              <a
+                className={headerItemClass("work")}
+                data-header-item="work"
+                href="#work"
+                aria-current={activeHeaderItem === "work" ? "location" : undefined}
+                onClick={() => selectHeaderItem("work")}
+              >
                 work
               </a>
-              <a className="pivot-item" href="#vision">
+              <a
+                className={headerItemClass("vision")}
+                data-header-item="vision"
+                href="#vision"
+                aria-current={activeHeaderItem === "vision" ? "location" : undefined}
+                onClick={() => selectHeaderItem("vision")}
+              >
                 vision
               </a>
-              <a className="pivot-item" href="#studio">
+              <a
+                className={headerItemClass("studio")}
+                data-header-item="studio"
+                href="#studio"
+                aria-current={activeHeaderItem === "studio" ? "location" : undefined}
+                onClick={() => selectHeaderItem("studio")}
+              >
                 studio
               </a>
-              <a
-                className="pivot-item pivot-item-external"
+              <ExternalLink
+                className={headerItemClass("github", true)}
+                data-header-item="github"
                 href="https://github.com/NukaWorks"
-                target="_blank"
-                rel="noreferrer"
+                label="NukaWorks on GitHub"
+                onClick={() => selectHeaderItem("github")}
               >
                 GitHub
-              </a>
+              </ExternalLink>
             </nav>
 
             <a
               className="metro-avatar-tile company-logo-tile"
               href="#top"
               aria-label="NukaWorks home"
+              onClick={() => selectHeaderItem("top")}
             >
               <BrandLogo />
             </a>
@@ -171,15 +291,10 @@ function App() {
 
         <main id="main">
           <section className="company-frame hero" id="top" aria-labelledby="hero-title">
-            <div className="hero-kicker">
-              <span className="status-dot" />
-              Independent software company · France
-            </div>
-
             <div className="hero-heading-row">
               <h1 id="hero-title">
-                Software for
-                <span>human connection.</span>
+                <span className="hero-title-lead">We build a new</span>
+                <span className="hero-title-accent">era of apps.</span>
               </h1>
               <p className="hero-intro">
                 NukaWorks creates social products and open tools for the people on both sides of
@@ -218,11 +333,10 @@ function App() {
             </div>
 
             <div className="work-grid">
-              <a
+              <ExternalLink
                 className="metro-tile metro-tile-moggo"
                 href="https://www.moggo.fr/"
-                target="_blank"
-                rel="noreferrer"
+                label="Moggo"
               >
                 <div className="tile-topline">
                   <span>Flagship product</span>
@@ -239,7 +353,7 @@ function App() {
                     collaborate and deliver work without the usual friction.
                   </p>
                 </div>
-              </a>
+              </ExternalLink>
 
               <div className="open-source-panel">
                 <div className="open-source-header">
@@ -247,21 +361,16 @@ function App() {
                     <p className="section-kicker">Built in the open</p>
                     <h3>Open source, on purpose.</h3>
                   </div>
-                  <span className={`api-status api-status-${githubState}`} aria-live="polite">
-                    <span />
-                    {githubState === "live" ? "Live GitHub data" : "GitHub projects"}
-                  </span>
                 </div>
 
                 <div className="repo-list">
                   {featuredRepos.map((repo, index) => {
                     const copy = PROJECT_COPY[repo.name]!;
                     return (
-                      <a
+                      <ExternalLink
                         className="repo-row"
                         href={repo.html_url}
-                        target="_blank"
-                        rel="noreferrer"
+                        label={repo.name}
                         key={repo.name}
                       >
                         <span className="repo-index">0{index + 2}</span>
@@ -278,19 +387,18 @@ function App() {
                           <span>{formatActivity(repo.pushed_at)}</span>
                         </span>
                         <ArrowIcon />
-                      </a>
+                      </ExternalLink>
                     );
                   })}
                 </div>
 
-                <a
+                <ExternalLink
                   className="text-link"
                   href="https://github.com/NukaWorks"
-                  target="_blank"
-                  rel="noreferrer"
+                  label="NukaWorks on GitHub"
                 >
                   See the whole organization <span aria-hidden="true">→</span>
-                </a>
+                </ExternalLink>
               </div>
             </div>
           </section>
@@ -365,12 +473,15 @@ function App() {
                   ambitious idea that refuses to stay on paper.
                 </p>
                 <div className="founder-links">
-                  <a href="https://github.com/powerm1nt" target="_blank" rel="noreferrer">
+                  <ExternalLink href="https://github.com/powerm1nt" label="Emi on GitHub">
                     GitHub <ArrowIcon />
-                  </a>
-                  <a href="https://developer.nuka.works/team/powerm1nt" target="_blank" rel="noreferrer">
+                  </ExternalLink>
+                  <ExternalLink
+                    href="https://blog.nuka.works/blog"
+                    label="More about Emi"
+                  >
                     More about Emi <ArrowIcon />
-                  </a>
+                  </ExternalLink>
                 </div>
               </div>
             </div>
@@ -380,15 +491,14 @@ function App() {
             <p className="section-kicker">What’s next?</p>
             <h2 id="contact-title">Let’s make the next useful thing.</h2>
             <p>Follow the work, explore the code, or come back when the next experiment ships.</p>
-            <a
+            <ExternalLink
               className="metro-button metro-button-primary"
               href="https://github.com/NukaWorks"
-              target="_blank"
-              rel="noreferrer"
+              label="NukaWorks on GitHub"
             >
               Follow NukaWorks
               <ArrowIcon />
-            </a>
+            </ExternalLink>
           </section>
         </main>
 
@@ -405,6 +515,7 @@ function App() {
           </div>
         </footer>
       </div>
+      <AppModal />
     </>
   );
 }
