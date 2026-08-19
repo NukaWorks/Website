@@ -69,22 +69,12 @@ body {
   text-decoration: none;
 }
 
-.brand-mark {
-  width: 2rem;
-  height: 2rem;
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 2px;
-  transform: rotate(-4deg);
-}
-
-.brand-mark span {
-  background: var(--color-text);
-}
-
-.brand-mark span:nth-child(2),
-.brand-mark span:nth-child(3) {
-  background: var(--color-accent-strong);
+.company-logo {
+  width: 2.25rem;
+  height: 2.25rem;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  object-fit: cover;
 }
 
 .company-wordmark {
@@ -815,9 +805,9 @@ body {
     font-size: 0.8rem;
   }
 
-  .brand-mark {
-    width: 1.7rem;
-    height: 1.7rem;
+  .company-logo {
+    width: 2rem;
+    height: 2rem;
   }
 
   .company-wordmark {
