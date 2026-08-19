@@ -1,4 +1,5 @@
 import express, { type NextFunction, type Request, type Response } from "express";
+import path from "node:path";
 import { config } from "./config.js";
 import { SESSION_HEADER } from "./services/sessions.js";
 import { pagesRouter } from "./routes/pages.js";
@@ -42,10 +43,28 @@ app.use("/api/auth", authRouter);
 app.use("/api/proposals", proposalsRouter);
 app.use("/api/wallpaper", wallpaperRouter);
 
-/** Cloud Run's health probe hits "/" — answer it rather than falling through to the 404. */
-app.get("/", (_req, res) => {
-  res.json({ status: "ok" });
-});
+// The company image includes the Vite build at WEB_ROOT. Static files and the SPA fallback are
+// mounted after every API route so an unknown /api request still returns JSON rather than the app
+// shell. The original standalone blog API does not set WEB_ROOT and keeps its health response.
+const webRoot = process.env.WEB_ROOT?.trim();
+if (webRoot) {
+  app.use(express.static(webRoot, { index: false }));
+  app.use((req, res, next) => {
+    if (req.method !== "GET" || req.path.startsWith("/api/")) {
+      next();
+      return;
+    }
+
+    res.sendFile(path.join(webRoot, "index.html"), (error) => {
+      if (error) next(error);
+    });
+  });
+} else {
+  /** Cloud Run's health probe hits "/" — answer it rather than falling through to the 404. */
+  app.get("/", (_req, res) => {
+    res.json({ status: "ok" });
+  });
+}
 
 app.use((_req, res) => {
   res.status(404).json({ error: "Not found." });

@@ -1,61 +1,25 @@
-name: Deploy frontend to Cloud Storage
+name: Deploy website to Cloud Run
 
-# Builds the React app and publishes it to the GCS bucket the load balancer serves
-# blog.nuka.works from.
-
+# The company frontend and API share one IAP-protected Cloud Run service. Serving them from the
+# same origin makes the Google SSO boundary cover every route and removes cross-origin API setup.
 on:
   push:
     branches:
       - main
     paths-ignore:
       - "patches/**"
-      - "server/**"
+      - "terraform/**"
   workflow_dispatch:
 
 permissions:
   id-token: write
-  contents: write
+  contents: read
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      # version.json is baked into the bundle, so the bump must precede the build and a later
-      # failure still leaves one pushed. Rebase before pushing so a re-run or an overlapping push
-      # doesn't fail the deploy on a non-fast-forward.
-      - name: Bump build number
-        if: github.event_name == 'push'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git pull --rebase origin "${GITHUB_REF_NAME}"
-
-          FILE=public/version.json
-          VERSION=$(jq -r '.version' "$FILE")
-          BUILD=$(( $(jq -r '.build' "$FILE") + 1 ))
-          jq --arg v "$VERSION" --argjson b "$BUILD" '.version = $v | .build = $b' "$FILE" > "$FILE.tmp"
-          mv "$FILE.tmp" "$FILE"
-
-          git commit -am "chore: bump build number to $BUILD [skip ci]"
-          git push origin "HEAD:${GITHUB_REF_NAME}"
-
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build
-        run: pnpm build
-        env:
-          VITE_API_BASE_URL: ${{ vars.API_BASE_URL }}
-          VITE_ASSET_BASE_URL: ${{ vars.ASSET_BASE_URL }}
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
@@ -65,34 +29,25 @@ jobs:
 
       - uses: google-github-actions/setup-gcloud@v2
 
-      # Hashed assets first so the shell never points at files still uploading. version.json is
-      # excluded with index.html: it is not content-hashed, and the immutable cache below would pin
-      # it at the edge.
-      - name: Upload hashed assets
-        run: |
-          gcloud storage rsync dist gs://${{ vars.GCP_WEB_BUCKET }} \
-            --recursive --exclude '^(index\.html|version\.json)$' \
-            --cache-control="public, max-age=31536000, immutable"
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ vars.GCP_REGION }}-docker.pkg.dev --quiet
 
-      - name: Upload index.html and version.json
+      - name: Build and push website image
+        id: image
         run: |
-          gcloud storage cp dist/index.html gs://${{ vars.GCP_WEB_BUCKET }}/index.html \
-            --cache-control="no-cache, max-age=0"
-          gcloud storage cp dist/version.json gs://${{ vars.GCP_WEB_BUCKET }}/version.json \
-            --cache-control="no-cache, max-age=0"
+          IMAGE="${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/containers/${{ vars.GCP_CLOUD_RUN_SERVICE }}:${{ github.sha }}"
+          docker build -f server/Dockerfile \
+            --build-arg VITE_API_BASE_URL= \
+            --build-arg VITE_ASSET_BASE_URL="${{ vars.ASSET_BASE_URL }}" \
+            -t "$IMAGE" .
+          docker push "$IMAGE"
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
 
-      # The only paths that aren't content-hashed, so the only ones that can go stale at the edge.
-      - name: Invalidate CDN cache
+      # Terraform owns IAP, environment variables, scaling, and the runtime service account. This
+      # updates only the image, so a deploy can never accidentally weaken the SSO boundary.
+      - name: Deploy to Cloud Run
         run: |
-          gcloud compute url-maps invalidate-cdn-cache ${{ vars.GCP_URL_MAP }} \
-            --path "/index.html" --async
-          gcloud compute url-maps invalidate-cdn-cache ${{ vars.GCP_URL_MAP }} \
-            --path "/version.json" --async
-
-      - name: Purge Cloudflare cache
-        run: |
-          curl -s -X POST "https://api.cloudflare.com/client/v4/zones/${{ secrets.CLOUDFLARE_ZONE_ID }}/purge_cache" \
-            -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            --data '{"purge_everything":true}' \
-            --fail
+          gcloud run deploy "${{ vars.GCP_CLOUD_RUN_SERVICE }}" \
+            --image "${{ steps.image.outputs.image }}" \
+            --region "${{ vars.GCP_REGION }}" \
+            --quiet

@@ -17,9 +17,6 @@ terraform
 patches
 deploy
 scripts
-public
-src
-
 *.md
 .env
 .env.*
