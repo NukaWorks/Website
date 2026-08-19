@@ -4,16 +4,18 @@ Working rules for humans and coding agents in this repository. Read this before 
 
 ## What this is
 
-`about-me` is the personal site behind `blog.nuka.works`. It has three parts:
+`Website` is the company site behind `nuka.works`. It was forked from About-me and retains the
+shared platform pieces, but its production boundary is one Google-IAP-protected Cloud Run service.
+It has three parts:
 
 | Part      | Location    | Stack                                                          |
 | --------- | ----------- | -------------------------------------------------------------- |
 | Frontend  | `src/`      | React 19 + TypeScript, Vite, SCSS. Root pnpm package.           |
-| API       | `server/`   | Express 5 + TypeScript on Cloud Run. Its own pnpm package.      |
-| Infra     | `terraform/`| Google Cloud: GCS buckets, global ALB + Cloud CDN, Secret Manager, Workload Identity Federation. |
+| API/host  | `server/`   | Express 5 + TypeScript; serves both `dist/` and `/api` on Cloud Run. Its own pnpm package. |
+| Infra     | `terraform/`| Shared Google Cloud ALB/assets plus Cloud Run, IAP, Secret Manager, and Workload Identity Federation. |
 
-Content (markdown pages, images) does not live in git. It sits in the assets bucket under the
-`static/` prefix and is edited through the API or the `patches/` flow described below.
+Company-owned bucket content sits under `shared_assets/` in the assets bucket. The inherited blog
+content remains under `static/`; never mix or migrate objects between those prefixes.
 
 The API is a separate package on purpose: its dependencies (`express`, `@google-cloud/storage`,
 `octokit`) must never reach the browser bundle's dependency graph.
@@ -55,9 +57,10 @@ Two long-lived branches:
 - `main`: what deploys. Receives `develop` through merge commits subjected
   `Merge branch 'develop' into main: <topic>`.
 
-CI pushes `chore: bump build number to N [skip ci]` commits directly to `main` on every deploy, so
-`main` is routinely ahead of `develop`. Always `git fetch` and fast-forward before merging or
-pushing, or the push is rejected.
+The fork inherited historical build-number commits on `main`, so `main` begins ahead of `develop`.
+The company deploy workflow is read-only to the repository (enforced by organization policy) and
+tags images with the commit SHA instead of pushing new commits. Always fetch and fast-forward
+before merging or pushing.
 
 ### Hotfixes go to both branches
 
@@ -127,8 +130,7 @@ load-bearing for them. Respect `prefers-reduced-motion`.
 | Workflow            | Trigger                                       | Effect                                     |
 | ------------------- | --------------------------------------------- | ------------------------------------------ |
 | `build-check.yml`   | push to `develop`, PRs into `develop`/`main`  | Compile only, no credentials               |
-| `deploy-web.yml`    | push to `main` (ignores `patches/`, `server/`)| Bumps `version.json`, builds, syncs to the web bucket |
-| `deploy-api.yml`    | push to `main` touching `server/` or lockfiles| Builds and deploys Cloud Run               |
+| `deploy-web.yml`    | push to `main` (ignores `patches/`, `terraform/`)| Builds the combined frontend/API image and deploys the IAP-protected `website` Cloud Run service |
 | `apply-patches.yml` | push to `main` adding `patches/**/*.patch`    | Applies content patches to the assets bucket |
 | `check-patches.yml` | `pull_request_target` on patch PRs            | Validates visitor-proposed content patches |
 
@@ -145,6 +147,9 @@ applied to bucket objects: never execute patch content, and note that proposal P
   exact public paths it had before the Azure migration. Changing it breaks every existing link.
 - The old Azure stack was decommissioned in August 2026. `scripts/migrate-azure-to-gcp.sh` is kept
   for its historical record of the migration; it no longer has live resources to act on.
+- The company site shares `nwrks-assets-prod` with the blog but owns only the `shared_assets/`
+  prefix. Its frontend is served from Cloud Run—not the blog web bucket—so Google IAP can require
+  `nuka.works` Workspace SSO before returning the site.
 
 ## House rules
 

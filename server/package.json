@@ -1,7 +1,7 @@
 {
   "name": "aboutme-server",
   "version": "2.1",
-  "description": "About me Website — API",
+  "description": "NukaWorks website and API server",
   "private": true,
   "type": "module",
   "main": "dist/index.js",
