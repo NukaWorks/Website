@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./Common/main.scss";
 import App from "./App";
+import { ExternalLinkProvider } from "./Services/externalLink";
 
 // #app, not #root: app.scss's layout rules and the pre-boot skeleton both hang off that id.
 const container = document.getElementById("app");
@@ -11,6 +12,8 @@ if (!container) {
 
 createRoot(container).render(
   <StrictMode>
-    <App />
+    <ExternalLinkProvider>
+      <App />
+    </ExternalLinkProvider>
   </StrictMode>
 );

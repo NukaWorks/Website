@@ -2,7 +2,7 @@
 
 html {
   scroll-behavior: smooth;
-  scroll-padding-top: 6rem;
+  scroll-padding-top: 9rem;
 }
 
 body {
@@ -65,6 +65,27 @@ body {
   display: block;
 }
 
+.company-smart-header {
+  position: sticky;
+  z-index: 20;
+  top: 0;
+  transition:
+    transform 0.42s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.28s ease;
+  will-change: transform;
+}
+
+.company-smart-header.is-visible {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.company-smart-header.is-hidden {
+  transform: translateY(calc(-100% - 0.5rem));
+  opacity: 0;
+  pointer-events: none;
+}
+
 .company-wordmark {
   font-size: 1.2rem;
   font-weight: 300;
@@ -97,7 +118,6 @@ body {
   animation: metro-enter 0.65s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-.hero-kicker,
 .section-kicker,
 .founder-role,
 .tile-index,
@@ -110,20 +130,6 @@ body {
   text-transform: uppercase;
 }
 
-.hero-kicker {
-  display: flex;
-  align-items: center;
-  gap: 0.7rem;
-  margin-bottom: clamp(2rem, 5vw, 4rem);
-}
-
-.status-dot {
-  width: 0.6rem;
-  height: 0.6rem;
-  background: var(--color-tip);
-  box-shadow: 0 0 0 0.3rem var(--color-tip-bg);
-}
-
 .hero-heading-row {
   display: grid;
   grid-template-columns: minmax(0, 4fr) minmax(14rem, 1fr);
@@ -132,17 +138,25 @@ body {
 }
 
 .hero h1 {
-  max-width: 10ch;
   margin: 0;
   color: var(--color-text);
-  font-size: clamp(4.2rem, 11vw, 9.5rem);
+  font-size: clamp(4.2rem, 9vw, 8rem);
   font-weight: 200;
   letter-spacing: -0.065em;
-  line-height: 0.78;
+  line-height: 0.82;
 }
 
 .hero h1 span {
   display: block;
+  white-space: nowrap;
+}
+
+.hero-title-lead {
+  color: var(--color-text);
+  font-weight: 200;
+}
+
+.hero h1 .hero-title-accent {
   margin-left: clamp(0rem, 6vw, 6rem);
   color: var(--color-accent-strong);
   font-weight: 700;
@@ -375,34 +389,6 @@ body {
 .open-source-header h3 {
   max-width: 8ch;
   font-size: clamp(2.5rem, 4.2vw, 4rem);
-}
-
-.api-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: var(--color-text-muted);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.67rem;
-  white-space: nowrap;
-}
-
-.api-status > span {
-  width: 0.45rem;
-  height: 0.45rem;
-  background: var(--color-text-faint);
-}
-
-.api-status-loading > span {
-  animation: status-blink 1s steps(2) infinite;
-}
-
-.api-status-live > span {
-  background: var(--color-tip);
-}
-
-@keyframes status-blink {
-  50% { opacity: 0.25; }
 }
 
 .repo-list {
@@ -764,11 +750,11 @@ body {
   }
 
   .hero h1 {
-    font-size: clamp(3.8rem, 20vw, 6.5rem);
-    line-height: 0.82;
+    font-size: clamp(2.9rem, 14vw, 5.2rem);
+    line-height: 0.86;
   }
 
-  .hero h1 span {
+  .hero h1 .hero-title-accent {
     margin-left: 0;
   }
 
@@ -845,6 +831,7 @@ body {
   }
 
   .hero,
+  .company-smart-header,
   .metro-tile,
   .repo-row > *,
   .text-link span {
