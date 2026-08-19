@@ -134,29 +134,37 @@ function App() {
       <Wallpaper />
 
       <div className="company-site">
-        <header className="company-header">
-          <div className="company-frame company-header-inner">
-            <a className="company-brand" href="#top" aria-label="NukaWorks home">
-              <BrandLogo />
-              <span className="company-wordmark">
-                <strong>Nuka</strong>Works
-              </span>
-            </a>
-
-            <nav className="company-nav" aria-label="Primary navigation">
-              <a href="#work">work</a>
-              <a href="#vision">vision</a>
-              <a href="#studio">studio</a>
+        <header className="metro-header">
+          <div className="metro-header-row">
+            <nav className="metro-pivot" aria-label="Primary navigation">
+              <a className="pivot-item is-active" href="#top" aria-current="page">
+                home
+              </a>
+              <a className="pivot-item" href="#work">
+                work
+              </a>
+              <a className="pivot-item" href="#vision">
+                vision
+              </a>
+              <a className="pivot-item" href="#studio">
+                studio
+              </a>
+              <a
+                className="pivot-item pivot-item-external"
+                href="https://github.com/NukaWorks"
+                target="_blank"
+                rel="noreferrer"
+              >
+                GitHub
+              </a>
             </nav>
 
             <a
-              className="company-header-link"
-              href="https://github.com/NukaWorks"
-              target="_blank"
-              rel="noreferrer"
+              className="metro-avatar-tile company-logo-tile"
+              href="#top"
+              aria-label="NukaWorks home"
             >
-              GitHub
-              <ArrowIcon />
+              <BrandLogo />
             </a>
           </div>
         </header>
