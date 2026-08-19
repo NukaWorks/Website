@@ -3,8 +3,8 @@
   "name": "NukaWorks — Software for human connection",
   "icons": [
     {
-      "src": "/icon-192.png",
-      "sizes": "192x192",
+      "src": "https://nwrks-cdn.public.prod.nuka.works/static/logo_nwrks.png",
+      "sizes": "378x378",
       "type": "image/png"
     }
   ],

@@ -28,6 +28,9 @@ const PROJECT_COPY: Record<string, ProjectCopy> = {
   },
 };
 
+const NUKAWORKS_LOGO_URL =
+  "https://nwrks-cdn.public.prod.nuka.works/static/logo_nwrks.png";
+
 const FALLBACK_REPOS: GitHubRepo[] = Object.keys(PROJECT_COPY).map((name) => ({
   name,
   html_url: `https://github.com/NukaWorks/${name}`,
@@ -54,14 +57,17 @@ function CodeIcon() {
   );
 }
 
-function BrandMark() {
+function BrandLogo() {
   return (
-    <span className="brand-mark" aria-hidden="true">
-      <span />
-      <span />
-      <span />
-      <span />
-    </span>
+    <img
+      className="company-logo"
+      src={NUKAWORKS_LOGO_URL}
+      alt=""
+      width="378"
+      height="378"
+      decoding="async"
+      aria-hidden="true"
+    />
   );
 }
 
@@ -131,7 +137,7 @@ function App() {
         <header className="company-header">
           <div className="company-frame company-header-inner">
             <a className="company-brand" href="#top" aria-label="NukaWorks home">
-              <BrandMark />
+              <BrandLogo />
               <span className="company-wordmark">
                 <strong>Nuka</strong>Works
               </span>
@@ -381,7 +387,7 @@ function App() {
         <footer className="company-footer">
           <div className="company-frame company-footer-inner">
             <a className="company-brand" href="#top" aria-label="Back to top">
-              <BrandMark />
+              <BrandLogo />
               <span className="company-wordmark">
                 <strong>Nuka</strong>Works
               </span>
